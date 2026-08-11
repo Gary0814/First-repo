@@ -133,15 +133,29 @@
   }
 
   .search-wrap svg{
-    position:absolute;
-    right:16px;
-    top:50%;
-    transform:translateY(-50%);
     width:18px;
     height:18px;
     color:var(--ink-soft);
-    pointer-events:none;
   }
+
+  .search-wrap button{
+    position:absolute;
+    right:6px;
+    top:50%;
+    transform:translateY(-50%);
+    width:36px;
+    height:36px;
+    border-radius:50%;
+    border:none;
+    background:transparent;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+  }
+
+  .search-wrap button:hover{ background: rgba(31,43,39,0.06); }
+  .search-wrap button:focus-visible{ outline:2px solid var(--teal); outline-offset:2px; }
 
   .search-hint{
     font-family:'IBM Plex Mono', monospace;
@@ -175,6 +189,55 @@
     border:1px dashed var(--line);
     border-radius:var(--radius);
     display:none;
+  }
+
+  .pagination{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:8px;
+    margin-top:28px;
+    flex-wrap:wrap;
+  }
+
+  .page-btn{
+    min-width:36px;
+    height:36px;
+    padding:0 8px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .page-btn[aria-current="true"]{
+    background:var(--teal);
+    color:#fff;
+    border-color:var(--teal);
+  }
+
+  .page-btn:hover:not([aria-current="true"]):not(:disabled){
+    background: color-mix(in srgb, var(--teal) 10%, var(--paper));
+  }
+
+  .page-btn:disabled{ opacity:0.35; cursor:not-allowed; }
+  .page-btn:focus-visible{ outline:2px solid var(--teal); outline-offset:2px; }
+
+  details.highlight{
+    outline:2px solid var(--coral);
+    outline-offset:2px;
+    animation: pulseGlow 1.6s ease-out 1;
+  }
+
+  @keyframes pulseGlow{
+    from{ box-shadow:0 0 0 7px rgba(184,92,76,0.22); }
+    to{ box-shadow:0 0 0 0 rgba(184,92,76,0); }
   }
 
   details{
@@ -370,6 +433,7 @@
 
   @media (prefers-reduced-motion: reduce){
     .arrow, .steps span.step-text{ transition:none; }
+    details.highlight{ animation:none; }
   }
 </style>
 </head>
@@ -399,17 +463,20 @@
     </div>
   </div>
 
-  <div class="search-wrap">
-    <input id="search" type="text" placeholder="Type a symptom or sickness… e.g. migraine, sore throat" autocomplete="off">
-    <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-  </div>
-  <p class="search-hint" id="hint">50 conditions in the cabinet — start typing to narrow it down</p>
+  <form class="search-wrap" id="search-form">
+    <input id="search" type="search" placeholder="Type a symptom or sickness and press Enter… e.g. migraine" autocomplete="off">
+    <button type="submit" aria-label="Search">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+  </form>
+  <p class="search-hint" id="hint">50 conditions across 5 pages — type a symptom and press Enter to jump to it</p>
 </header>
 
 <div class="wrap">
-  <p class="count-line" id="count-line">Showing all 50</p>
+  <p class="count-line" id="count-line"></p>
   <div class="cabinet" id="cabinet"></div>
-  <div class="empty-state" id="empty-state">No matches for that. Try a different word, or browse the full list by clearing the search.</div>
+  <div class="empty-state" id="empty-state">No matches for that. Try a different word.</div>
+  <nav class="pagination" id="pagination" aria-label="Result pages"></nav>
 
   <footer>
     <p><strong>This site is general information, not medical advice.</strong> It isn't a substitute for diagnosis or treatment from a qualified professional. If you think you're having a medical emergency, contact your local emergency number right away.</p>
@@ -474,8 +541,10 @@ const conditions = [
 const cabinet = document.getElementById('cabinet');
 const emptyState = document.getElementById('empty-state');
 const countLine = document.getElementById('count-line');
+const searchForm = document.getElementById('search-form');
 const searchInput = document.getElementById('search');
 const hint = document.getElementById('hint');
+const pagination = document.getElementById('pagination');
 
 const ICONS = {
   water: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l-1.4 14.8a2 2 0 0 1-2 1.7H9.4a2 2 0 0 1-2-1.7L6 3z"/><path d="M7 8h10"/></svg>',
@@ -550,35 +619,90 @@ function cardHTML(c, idx){
   </details>`;
 }
 
-function render(list){
-  if(list.length === 0){
-    cabinet.innerHTML = '';
-    emptyState.style.display = 'block';
-    countLine.textContent = 'No matches';
+const PAGE_SIZE = 10;
+let currentPage = 1;
+
+function totalPages(){
+  return Math.ceil(conditions.length / PAGE_SIZE);
+}
+
+function pageItems(page){
+  const start = (page - 1) * PAGE_SIZE;
+  return conditions.slice(start, start + PAGE_SIZE).map((c, i) => ({ c, idx: start + i }));
+}
+
+function prefersReducedMotion(){
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function renderPagination(){
+  const tp = totalPages();
+  let html = `<button class="page-btn" id="prev-btn" ${currentPage === 1 ? 'disabled' : ''} aria-label="Previous page">&larr;</button>`;
+  for(let p = 1; p <= tp; p++){
+    html += `<button class="page-btn" data-page="${p}" aria-current="${p === currentPage}">${p}</button>`;
+  }
+  html += `<button class="page-btn" id="next-btn" ${currentPage === tp ? 'disabled' : ''} aria-label="Next page">&rarr;</button>`;
+  pagination.innerHTML = html;
+}
+
+function renderPage(page, opts = {}){
+  currentPage = Math.min(Math.max(1, page), totalPages());
+  const items = pageItems(currentPage);
+  emptyState.style.display = 'none';
+  cabinet.innerHTML = items.map(({ c, idx }) => cardHTML(c, idx)).join('');
+
+  const startNum = (currentPage - 1) * PAGE_SIZE + 1;
+  const endNum = Math.min(currentPage * PAGE_SIZE, conditions.length);
+  countLine.textContent = `Page ${currentPage} of ${totalPages()} — showing ${startNum}–${endNum} of ${conditions.length}`;
+
+  renderPagination();
+
+  if(opts.openIdx !== undefined){
+    const details = cabinet.querySelector(`details[data-idx="${opts.openIdx}"]`);
+    if(details){
+      details.open = true;
+      details.classList.add('highlight');
+      details.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+      setTimeout(() => details.classList.remove('highlight'), 1800);
+    }
+  } else {
+    window.scrollTo({ top: cabinet.offsetTop - 20, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  }
+}
+
+function findMatches(query){
+  const q = query.trim().toLowerCase();
+  if(!q) return [];
+  return conditions
+    .map((c, idx) => ({ c, idx }))
+    .filter(({ c }) => c.name.toLowerCase().includes(q) || c.tag.toLowerCase().includes(q));
+}
+
+searchForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const raw = searchInput.value.trim();
+  if(!raw){
+    hint.textContent = '50 conditions across 5 pages — type a symptom and press Enter to jump to it';
     return;
   }
-  emptyState.style.display = 'none';
-  cabinet.innerHTML = list.map(({c, idx}) => cardHTML(c, idx)).join('');
-  countLine.textContent = list.length === conditions.length
-    ? `Showing all ${conditions.length}`
-    : `Showing ${list.length} of ${conditions.length}`;
-}
+  const matches = findMatches(raw);
+  if(matches.length === 0){
+    hint.textContent = `No matches for "${raw}" — try another word`;
+    emptyState.style.display = 'block';
+    return;
+  }
+  const { idx } = matches[0];
+  const targetPage = Math.floor(idx / PAGE_SIZE) + 1;
+  hint.textContent = `${matches.length} match${matches.length === 1 ? '' : 'es'} for "${raw}" — jumped to page ${targetPage}`;
+  renderPage(targetPage, { openIdx: idx });
+});
 
-function filterConditions(query){
-  const q = query.trim().toLowerCase();
-  const indexed = conditions.map((c, idx) => ({c, idx}));
-  if(!q) return indexed;
-  return indexed.filter(({c}) =>
-    c.name.toLowerCase().includes(q) || c.tag.toLowerCase().includes(q)
-  );
-}
-
-searchInput.addEventListener('input', (e) => {
-  const results = filterConditions(e.target.value);
-  render(results);
-  hint.textContent = e.target.value.trim()
-    ? `${results.length} match${results.length === 1 ? '' : 'es'} for "${e.target.value.trim()}"`
-    : '50 conditions in the cabinet — start typing to narrow it down';
+pagination.addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  if(btn.id === 'prev-btn') renderPage(currentPage - 1);
+  else if(btn.id === 'next-btn') renderPage(currentPage + 1);
+  else if(btn.dataset.page) renderPage(parseInt(btn.dataset.page, 10));
 });
 
 cabinet.addEventListener('change', (e) => {
@@ -592,7 +716,7 @@ cabinet.addEventListener('change', (e) => {
   if(badge) badge.textContent = `${checked}/${boxes.length}`;
 });
 
-render(filterConditions(''));
+renderPage(1);
 </script>
 
 </body>
