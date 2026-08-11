@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="A simple, general-information symptom reference with searchable, paginated guides.">
+  <title>The Comfort Cabinet — Symptom Guide</title>
+  <style>
+    :root { --bg:#edf1ed; --paper:#fffef9; --ink:#1f2b27; --soft:#5e6a65; --teal:#275b55; --teal-dark:#173e39; --gold:#ac7525; --rose:#ad5046; --line:#d7dfd9; --shadow:0 10px 28px rgba(26,54,48,.08); }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; color:var(--ink); background:var(--bg); font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; }
+    button,input,select,textarea { font:inherit; }
+    button { cursor:pointer; }
+    .hero { padding:52px 20px 36px; text-align:center; background:linear-gradient(150deg,#dfe9e3,#f8f5eb); border-bottom:1px solid var(--line); }
+    .eyebrow,.label { font:600 12px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace; text-transform:uppercase; letter-spacing:.09em; color:var(--teal); }
+    h1,h2,h3 { font-family:Georgia,serif; color:var(--teal-dark); }
+    h1 { max-width:650px; margin:12px auto; font-size:clamp(2.2rem,5vw,3.8rem); line-height:1.05; }
+    .intro { max-width:620px; margin:0 auto 24px; color:var(--soft); }
+    .search-form { max-width:650px; display:flex; gap:10px; margin:auto; }
+    .search-form input { min-width:0; flex:1; border:1px solid #bfcac3; border-radius:12px; padding:14px 16px; background:white; outline-color:var(--teal); }
+    .primary,.search-form button { border:0; border-radius:12px; padding:14px 20px; color:white; background:var(--teal); font-weight:700; }
+    .primary:hover,.search-form button:hover { background:var(--teal-dark); }
+    .search-help { margin:10px 0 0; color:var(--soft); font-size:.86rem; }
+    main { max-width:1060px; margin:auto; padding:34px 20px 72px; }
+    .hidden { display:none !important; }
+    .toolbar { display:flex; justify-content:space-between; align-items:end; gap:16px; margin-bottom:18px; }
+    .toolbar h2 { margin:6px 0 0; font-size:1.6rem; }
+    .filters { display:flex; flex-wrap:wrap; gap:8px; }
+    .chip { padding:8px 12px; border:1px solid var(--line); border-radius:999px; color:var(--soft); background:var(--paper); }
+    .chip[aria-pressed="true"] { color:white; background:var(--teal); border-color:var(--teal); }
+    .result-note { margin:0 0 16px; color:var(--soft); }
+    .grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+    .card { display:flex; flex-direction:column; min-height:225px; padding:20px; border:1px solid var(--line); border-radius:16px; background:var(--paper); box-shadow:var(--shadow); }
+    .card .category { margin:0 0 9px; font:600 11px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace; text-transform:uppercase; letter-spacing:.08em; color:var(--accent,var(--teal)); }
+    .card h3 { margin:0 0 8px; font-size:1.35rem; }
+    .card p { margin:0; color:var(--soft); font-size:.93rem; }
+    .card-footer { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:auto; padding-top:18px; }
+    .text-button { border:0; color:var(--teal); background:transparent; font-weight:700; padding:5px 0; }
+    .save { width:36px; height:36px; border:1px solid var(--line); border-radius:50%; background:white; color:var(--gold); font-size:1.1rem; }
+    .save[aria-pressed="true"] { background:#fff4d9; border-color:#ddb75e; }
+    .pagination { display:flex; align-items:center; justify-content:center; gap:6px; margin:30px 0; }
+    .pagination button { min-width:40px; height:40px; padding:0 10px; border:1px solid var(--line); border-radius:9px; background:var(--paper); color:var(--ink); }
+    .pagination button:hover:not(:disabled),.pagination button[aria-current="page"] { background:var(--teal); color:white; border-color:var(--teal); }
+    .pagination button:disabled { cursor:not-allowed; opacity:.45; }
+    .notice { padding:18px; border-radius:12px; border:1px solid #e1b3ad; background:#fff4f1; color:#80372f; }
+    .empty { padding:38px; text-align:center; border:1px dashed #b4c1ba; border-radius:16px; background:var(--paper); color:var(--soft); }
+    .detail-head { display:flex; align-items:start; justify-content:space-between; gap:16px; margin-bottom:18px; }
+    .back { border:0; padding:0; background:transparent; color:var(--teal); font-weight:700; }
+    .detail-title { margin:8px 0 0; font-size:clamp(2rem,5vw,3rem); }
+    .detail-grid { display:grid; grid-template-columns:1.55fr .8fr; gap:18px; }
+    .panel { padding:24px; border:1px solid var(--line); border-radius:16px; background:var(--paper); box-shadow:var(--shadow); }
+    .panel h2 { margin:0 0 12px; font-size:1.35rem; }
+    .steps { display:grid; gap:10px; padding:0; margin:0; list-style:none; }
+    .steps label { display:flex; gap:10px; align-items:start; padding:10px; border-radius:9px; background:#f4f7f3; }
+    .steps input { width:18px; height:18px; accent-color:var(--teal); }
+    .steps input:checked + span { color:var(--soft); text-decoration:line-through; }
+    .flags { border-left:5px solid var(--rose); }
+    .flags h2 { color:var(--rose); }
+    .flags li { margin:8px 0; }
+    .side-list { display:grid; gap:10px; }
+    .side-list div { padding:12px; border-radius:10px; background:#f4f7f3; }
+    .log-box { margin-top:28px; padding:22px; border:1px solid var(--line); border-radius:16px; background:#e2ebe5; }
+    .log-box h2 { margin:0 0 4px; font-size:1.4rem; }
+    .log-form { display:grid; grid-template-columns:1fr 1fr auto; gap:10px; margin-top:14px; }
+    .log-form input,.log-form textarea { width:100%; padding:10px 12px; border:1px solid #bfcac3; border-radius:9px; background:white; }
+    .log-form textarea { grid-column:1 / -1; min-height:70px; resize:vertical; }
+    .log-list { padding-left:20px; color:var(--soft); }
+    .finder { margin-top:28px; padding:24px; border:1px solid var(--line); border-radius:16px; background:var(--paper); box-shadow:var(--shadow); }
+    .finder h2 { margin:0 0 4px; font-size:1.4rem; }
+    .finder-form { display:grid; grid-template-columns:1fr auto auto; gap:10px; margin-top:14px; }
+    .finder-form input { min-width:0; padding:11px 12px; border:1px solid #bfcac3; border-radius:9px; }
+    .secondary { padding:11px 14px; border:1px solid var(--teal); border-radius:9px; color:var(--teal); background:white; font-weight:700; }
+    .secondary:hover { background:#edf5f1; }
+    .finder-status { min-height:1.5em; margin:12px 0 0; color:var(--soft); font-size:.92rem; }
+    .pharmacy-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:14px; }
+    .pharmacy { padding:15px; border:1px solid var(--line); border-radius:12px; background:#f7faf7; }
+    .pharmacy h3 { margin:0 0 5px; font-size:1.05rem; }
+    .pharmacy p { margin:0 0 8px; color:var(--soft); font-size:.9rem; }
+    .pharmacy a { color:var(--teal); font-weight:700; font-size:.9rem; }
+    footer { max-width:1060px; margin:auto; padding:0 20px 44px; color:var(--soft); font-size:.88rem; }
+    @media (max-width:760px) { .grid { grid-template-columns:1fr; } .detail-grid { grid-template-columns:1fr; } .toolbar { align-items:start; flex-direction:column; } .search-form,.finder-form { flex-direction:column; display:flex; } .log-form { grid-template-columns:1fr; } .pharmacy-list { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <p class="eyebrow">General self-care reference</p>
+    <h1>The Comfort Cabinet</h1>
+    <p class="intro">Search common symptoms or conditions for general comfort steps and signs that mean you should seek professional care.</p>
+    <form class="search-form" id="search-form" role="search">
+      <input id="search" type="search" placeholder="Type a sickness or symptom — e.g. migraine" autocomplete="off" aria-label="Search symptoms and conditions">
+      <button type="submit">Search</button>
+    </form>
+    <p class="search-help">Press Enter to open a dedicated results page. Your search is also saved in the address bar.</p>
+  </header>
+
+  <main>
+    <section id="directory-view">
+      <div class="notice" role="note"><strong>Need urgent help?</strong> For severe trouble breathing, chest pain, a sudden severe headache, confusion, severe bleeding, or a possible emergency, contact your local emergency service now.</div>
+      <div class="toolbar">
+        <div><p class="label">Browse the cabinet</p><h2 id="view-title">All conditions</h2></div>
+        <div class="filters" id="filters" aria-label="Filter by category"></div>
+      </div>
+      <p class="result-note" id="result-note" aria-live="polite"></p>
+      <div class="grid" id="cards"></div>
+      <nav class="pagination" id="pagination" aria-label="Results pages"></nav>
+      <section class="finder" aria-labelledby="finder-title">
+        <p class="label">Find care nearby</p>
+        <h2 id="finder-title">Find a pharmacy near you</h2>
+        <p class="result-note">Enter a town, postcode, or address, or allow this page to use your current location. Your location is used for this search only and is never stored by this website.</p>
+        <form class="finder-form" id="finder-form">
+          <input id="place" placeholder="e.g. Kuala Lumpur or your postcode" aria-label="Town, postcode, or address">
+          <button class="primary" type="submit">Search area</button>
+          <button class="secondary" type="button" id="gps">Use my location</button>
+        </form>
+        <p class="finder-status" id="finder-status" role="status" aria-live="polite"></p>
+        <div class="pharmacy-list" id="pharmacy-list"></div>
+        <p class="search-help">Listings are supplied by OpenStreetMap volunteers. Check opening hours, stock, and services directly with the pharmacy before travelling.</p>
+      </section>
+      <section class="log-box" aria-labelledby="log-title">
+        <p class="label">Private on this device</p><h2 id="log-title">Quick symptom log</h2>
+        <p class="result-note">Save a short note before a health appointment. Entries stay only in this browser.</p>
+        <form class="log-form" id="log-form">
+          <input id="log-date" type="date" aria-label="Date">
+          <input id="log-symptom" placeholder="Symptom or condition" required aria-label="Symptom or condition">
+          <button class="primary" type="submit">Add note</button>
+          <textarea id="log-note" placeholder="What changed? Include timing, severity, or a possible trigger." aria-label="Symptom note"></textarea>
+        </form>
+        <ul class="log-list" id="log-list"></ul>
+      </section>
+    </section>
+
+    <section id="detail-view" class="hidden" aria-live="polite"></section>
+  </main>
+
+  <footer><strong>This website provides general information only, not medical advice.</strong> It is not a diagnosis or a substitute for care from a qualified clinician. Read medicine labels carefully and ask a pharmacist or clinician about medicines, pregnancy, children, allergies, or existing conditions.</footer>
+
+  <script>
+    const conditions = [
+      {name:'Flu',category:'Respiratory',tag:'Viral · body-wide',accent:'#275b55',summary:'Fever, aches, fatigue, and cough often come on quickly.',duration:'Often improves within about a week.',steps:['Rest as much as you can.','Sip water, broth, or electrolyte drinks regularly.','Use fever or pain medicine only as directed on its label.','Stay home and reduce close contact while unwell.'],flags:['Trouble breathing or chest pain.','Symptoms return worse after improving.','Higher-risk person: very young, older, pregnant, or chronic illness.']},
+      {name:'Common cold',category:'Respiratory',tag:'Viral · upper respiratory',accent:'#275b55',summary:'Runny nose, congestion, sore throat, and a mild cough.',duration:'Usually settles in 7–10 days.',steps:['Rest and drink fluids.','Use saline spray or rinse for congestion.','Try warm drinks or lozenges for throat comfort.','Run a humidifier if the air feels dry.'],flags:['Symptoms persist beyond 10 days.','High fever or significant facial pain.','Symptoms worsen after improving.']},
+      {name:'Sore throat',category:'Respiratory',tag:'Irritation · throat',accent:'#ac7525',summary:'Throat discomfort is common with viral infections and irritation.',duration:'Often eases within a few days.',steps:['Gargle warm salt water if safe for you.','Sip warm drinks and stay hydrated.','Use a lozenge if appropriate for your age.','Rest your voice.'],flags:['Trouble swallowing or breathing.','High fever or rash.','Lasts more than one week.']},
+      {name:'Cough',category:'Respiratory',tag:'Irritation · airway',accent:'#275b55',summary:'A cough can linger after a cold or be triggered by irritation.',duration:'May linger for 1–3 weeks after a cold.',steps:['Drink fluids to help thin mucus.','Try honey in warm water if age-appropriate (not for infants).','Use a humidifier at night.','Sleep slightly propped up.'],flags:['Coughing up blood.','Shortness of breath or wheezing.','Lasts longer than three weeks.']},
+      {name:'Seasonal allergies',category:'Allergy',tag:'Allergic · respiratory',accent:'#ad5046',summary:'Sneezing, itchy eyes, and a runny nose can follow exposure to pollen.',duration:'Symptoms often follow triggers or seasons.',steps:['Check pollen levels and limit exposure when high.','Rinse with saline if it helps you.','Shower after spending time outdoors.','Consider an antihistamine only as directed.'],flags:['Wheezing or trouble breathing.','Swelling of the face, lips, or throat.','Usual measures do not help.']},
+      {name:'Migraine',category:'Head & pain',tag:'Head pain · neurological',accent:'#ac7525',summary:'A severe headache that may include nausea and light sensitivity.',duration:'Episodes can last hours to about a day.',steps:['Rest in a dark, quiet room early.','Apply a cold compress to the head or neck.','Hydrate and have a light snack if tolerated.','Track possible triggers, sleep, and stress.'],flags:['Sudden “worst-ever” headache.','Fever, stiff neck, weakness, confusion, or vision loss.','Headaches are becoming more frequent or severe.']},
+      {name:'Tension headache',category:'Head & pain',tag:'Head pain · stress-related',accent:'#ac7525',summary:'A band-like ache that may be related to posture, stress, or eye strain.',duration:'Often eases within a few hours.',steps:['Take a screen and eye break.','Gently stretch your neck and shoulders.','Try a warm or cold compress.','Check that you have eaten and had fluids.'],flags:['Sudden severe headache.','Vision changes or confusion.','Occurs daily or is worsening.']},
+      {name:'Period cramps',category:'Head & pain',tag:'Menstrual · lower abdomen',accent:'#ad5046',summary:'Cramping around a period may affect the lower belly and back.',duration:'Often strongest on days one and two.',steps:['Use a heating pad or warm compress.','Try gentle movement or stretching.','Use pain medicine only as directed.','Rest and drink water.'],flags:['Pain regularly prevents everyday activities.','Bleeding is unusually heavy.','Suddenly much worse than usual.']},
+      {name:'Stomach upset',category:'Digestive',tag:'Digestive · general',accent:'#275b55',summary:'Nausea, cramps, or discomfort can have many causes.',duration:'Mild upset often eases within a day.',steps:['Sip clear fluids slowly.','Choose small, bland meals once tolerated.','Avoid greasy foods and alcohol for now.','Rest and note any food trigger.'],flags:['Cannot keep fluids down.','Severe or worsening abdominal pain.','Signs of dehydration.']},
+      {name:'Diarrhea',category:'Digestive',tag:'Digestive · general',accent:'#275b55',summary:'Loose stools can lead to fluid loss, especially in children and older adults.',duration:'Often settles within a few days.',steps:['Replace fluids regularly.','Choose bland foods when you feel ready.','Avoid caffeine, alcohol, and rich foods.','Wash hands frequently.'],flags:['Blood in stool or severe pain.','Signs of dehydration.','Lasts more than a few days.']},
+      {name:'Constipation',category:'Digestive',tag:'Digestive · general',accent:'#ac7525',summary:'Infrequent or difficult bowel movements can be uncomfortable.',duration:'May improve over several days with routine changes.',steps:['Drink water throughout the day.','Add fibre gradually.','Take a gentle walk if comfortable.','Do not ignore the urge to go.'],flags:['Severe pain or bloating.','Blood in stool.','No improvement after several days.']},
+      {name:'Heartburn',category:'Digestive',tag:'Digestive · burning',accent:'#ac7525',summary:'Burning discomfort after eating may be related to acid reflux.',duration:'Occasional episodes often settle within hours.',steps:['Stay upright after eating.','Choose smaller, less rich meals.','Avoid late meals if they trigger symptoms.','Prop your head up slightly at night.'],flags:['Chest pain with shortness of breath.','Trouble swallowing.','Symptoms happen more than twice weekly.']},
+      {name:'Food poisoning',category:'Digestive',tag:'Digestive · foodborne',accent:'#275b55',summary:'Vomiting or diarrhea can follow contaminated food, but other causes are possible.',duration:'Symptoms may pass within 24–48 hours.',steps:['Sip water or electrolyte drinks.','Rest and eat bland food as tolerated.','Avoid alcohol and greasy foods.','Wash hands carefully.'],flags:['High fever or bloody stool.','Signs of dehydration.','Symptoms last more than two days.']},
+      {name:'Pink eye',category:'Eyes & skin',tag:'Eye · irritation or infection',accent:'#ad5046',summary:'Redness and discharge need hygiene and, sometimes, clinician assessment.',duration:'Often clears within 7–10 days depending on cause.',steps:['Clean discharge gently with a clean damp cloth.','Wash hands and avoid touching eyes.','Do not share towels or cosmetics.','Avoid contact lenses until cleared.'],flags:['Eye pain or vision changes.','Strong light sensitivity.','No improvement after a week.']},
+      {name:'Minor rash',category:'Eyes & skin',tag:'Skin · irritation',accent:'#ad5046',summary:'Mild itchy or irritated skin can follow contact with an irritant.',duration:'Should improve after avoiding a trigger.',steps:['Stop using a possible new irritant.','Keep skin clean, cool, and dry.','Avoid scratching where possible.','Use fragrance-free moisturiser if it helps.'],flags:['Rash with breathing trouble or facial swelling.','Fever, blisters, or rapidly spreading redness.','Painful or infected-looking skin.']},
+      {name:'Back strain',category:'Muscles & joints',tag:'Muscle · lower back',accent:'#ac7525',summary:'A strain may follow lifting, a new activity, or awkward movement.',duration:'Many mild strains improve over days to weeks.',steps:['Keep gently moving as comfortable.','Try heat or cold, whichever helps.','Avoid heavy lifting for now.','Consider a gradual return to activity.'],flags:['Weakness, numbness, or bladder/bowel changes.','Pain after a major fall or injury.','Pain is severe or keeps worsening.']},
+      {name:'Sprain',category:'Muscles & joints',tag:'Joint · injury',accent:'#ac7525',summary:'A stretched or torn ligament can cause pain and swelling around a joint.',duration:'Recovery varies from days to weeks.',steps:['Rest the injured area from painful activity.','Use a wrapped cold pack briefly at a time.','Elevate when possible.','Return to activity gradually when comfortable.'],flags:['Joint looks deformed.','Cannot bear weight or use the limb.','Numbness, worsening swelling, or severe pain.']},
+      {name:'UTI symptoms',category:'Urinary',tag:'Urinary · possible infection',accent:'#ad5046',summary:'Burning or frequent urination needs medical assessment, especially with fever.',duration:'Symptoms may not resolve without treatment.',steps:['Drink water regularly.','Avoid holding urine.','Avoid caffeine or alcohol if they irritate symptoms.','Write down onset and symptoms for a clinician.'],flags:['Fever, back or side pain.','Blood in urine.','Pregnancy, male sex, or a child with symptoms.']}
+    ];
+    const PER_PAGE = 6;
+    const $ = s => document.querySelector(s);
+    const cards = $('#cards'), pagination = $('#pagination'), directory = $('#directory-view'), detail = $('#detail-view');
+    let activeCategory = 'All';
+    const saved = new Set(JSON.parse(localStorage.getItem('comfort-saved') || '[]'));
+    const categoryTips = {
+      'Respiratory':['Check your temperature if you feel feverish and record changes.','Avoid smoke, vaping, and strong scents while symptoms are active.','Choose simple nourishing food as your appetite returns.','Wash hands often and avoid sharing cups or utensils.'],
+      'Allergy':['Keep a note of likely triggers such as pollen, pets, or products.','Change clothes and shower after a high-pollen outdoor day.','Use a cool, clean compress for itchy eyes.','Ask a pharmacist which non-prescription option is suitable for you.'],
+      'Head & pain':['Take a quiet screen break and lower bright lights.','Have regular small meals if missing meals is a trigger.','Note your sleep, stress, timing, and symptoms.','Avoid alcohol while you are unwell or using pain medicines.'],
+      'Digestive':['Eat slowly and stop before you feel overly full.','Keep a short note of foods or drinks that make symptoms worse.','Avoid alcohol until you are feeling well.','Contact a pharmacist before using medicines if you have other conditions.'],
+      'Eyes & skin':['Use clean hands and clean towels around the affected area.','Avoid trying new cosmetics, lotions, or contact products until better.','Take a clear photo if changes need to be tracked.','Do not share towels, makeup, or eye products.'],
+      'Muscles & joints':['Move within a comfortable range instead of staying still all day.','Use supportive footwear and avoid uneven ground while recovering.','Avoid increasing activity until pain and swelling are improving.','Write down how the injury happened in case you need an assessment.'],
+      'Urinary':['Note when symptoms started and whether they are changing.','Avoid products that irritate you, such as scented washes.','Avoid alcohol until symptoms are assessed.','Seek prompt clinical advice instead of relying on self-treatment alone.']
+    };
+
+    function slug(name) { return name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''); }
+    function clean(s) { return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+    function getState() { const p = new URLSearchParams(location.hash.slice(1)); return {view:p.get('view') || 'directory', q:p.get('q') || '', page:Math.max(1,Number(p.get('page')) || 1), item:p.get('item')}; }
+    function setRoute(values) { const p = new URLSearchParams(); Object.entries(values).forEach(([k,v]) => { if(v) p.set(k,v); }); location.hash = p.toString(); }
+    function filtered(q) { const term = q.trim().toLowerCase(); return conditions.filter(c => (activeCategory === 'All' || c.category === activeCategory) && (!term || (c.name+' '+c.category+' '+c.tag+' '+c.summary).toLowerCase().includes(term))); }
+    function tipsFor(c) { return [...c.steps, ...(categoryTips[c.category] || [])].slice(0,8); }
+
+    function renderFilters() { const cats = ['All', ...new Set(conditions.map(c => c.category))]; $('#filters').innerHTML = cats.map(cat => `<button class="chip" aria-pressed="${cat===activeCategory}" data-category="${clean(cat)}">${clean(cat)}</button>`).join(''); }
+    function renderDirectory() {
+      const {q,page} = getState(); const list = filtered(q); const pages = Math.max(1,Math.ceil(list.length/PER_PAGE)); const safePage = Math.min(page,pages); const slice = list.slice((safePage-1)*PER_PAGE,safePage*PER_PAGE);
+      directory.classList.remove('hidden'); detail.classList.add('hidden');
+      $('#search').value = q; $('#view-title').textContent = q ? `Results for “${q}”` : activeCategory === 'All' ? 'All conditions' : activeCategory;
+      $('#result-note').textContent = list.length ? `${list.length} guide${list.length===1?'':'s'} found · Page ${safePage} of ${pages}` : 'No guides found.';
+      cards.innerHTML = slice.length ? slice.map(c => `<article class="card" style="--accent:${c.accent}"><p class="category">${clean(c.category)} · ${clean(c.tag)}</p><h3>${clean(c.name)}</h3><p>${clean(c.summary)}</p><div class="card-footer"><button class="text-button" data-open="${slug(c.name)}">Open guide →</button><button class="save" data-save="${slug(c.name)}" aria-label="Save ${clean(c.name)}" aria-pressed="${saved.has(slug(c.name))}">${saved.has(slug(c.name))?'★':'☆'}</button></div></article>`).join('') : '<div class="empty">Try another word, clear the search, or choose a different category.</div>';
+      pagination.innerHTML = list.length > PER_PAGE ? `<button data-page="${safePage-1}" ${safePage===1?'disabled':''}>←</button>${Array.from({length:pages},(_,i)=>`<button data-page="${i+1}" ${i+1===safePage?'aria-current="page"':''}>${i+1}</button>`).join('')}<button data-page="${safePage+1}" ${safePage===pages?'disabled':''}>→</button>` : '';
+      renderFilters();
+    }
+    function renderDetail(item) {
+      const c = conditions.find(x => slug(x.name) === item); if (!c) return setRoute({view:'directory'});
+      directory.classList.add('hidden'); detail.classList.remove('hidden');
+      detail.innerHTML = `<button class="back" id="back">← Back to results</button><div class="detail-head"><div><p class="label">${clean(c.category)} · ${clean(c.tag)}</p><h1 class="detail-title">${clean(c.name)}</h1><p class="intro" style="margin:0">${clean(c.summary)}</p></div><button class="save" data-save="${slug(c.name)}" aria-label="Save ${clean(c.name)}" aria-pressed="${saved.has(slug(c.name))}">${saved.has(slug(c.name))?'★':'☆'}</button></div><div class="detail-grid"><div class="panel"><h2>Eight comfort tips</h2><p class="result-note">Check off steps as you complete them. Your progress stays on this device.</p><ul class="steps">${tipsFor(c).map((step,i)=>`<li><label><input type="checkbox" data-step="${slug(c.name)}-${i}" ${localStorage.getItem('comfort-step-'+slug(c.name)+'-'+i)==='true'?'checked':''}><span>${clean(step)}</span></label></li>`).join('')}</ul></div><aside class="side-list"><div><strong>Typical course</strong><br><span>${clean(c.duration)}</span></div><div><strong>Saved guides</strong><br><span>${saved.size} condition${saved.size===1?'':'s'} saved</span></div><div><strong>Practical next step</strong><br><span>Record changes in the symptom log below.</span></div></aside></div><div class="panel flags" style="margin-top:18px"><h2>Get urgent medical advice if you notice</h2><ul>${c.flags.map(f=>`<li>${clean(f)}</li>`).join('')}</ul></div>`;
+      detail.scrollIntoView({behavior:'smooth',block:'start'});
+    }
+    function route() { const s=getState(); s.view==='detail' ? renderDetail(s.item) : renderDirectory(); }
+    function saveItem(item) { saved.has(item) ? saved.delete(item) : saved.add(item); localStorage.setItem('comfort-saved',JSON.stringify([...saved])); route(); }
+    function renderLog() { const log = JSON.parse(localStorage.getItem('comfort-log') || '[]'); $('#log-list').innerHTML = log.length ? log.map(e=>`<li><strong>${clean(e.date || 'Undated')} — ${clean(e.symptom)}</strong>${e.note ? `: ${clean(e.note)}` : ''}</li>`).join('') : '<li>No notes yet.</li>'; }
+    function distanceKm(lat1,lon1,lat2,lon2) { const r=6371, dLat=(lat2-lat1)*Math.PI/180, dLon=(lon2-lon1)*Math.PI/180, a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2; return 2*r*Math.asin(Math.sqrt(a)); }
+    function renderPharmacies(items,lat,lon) { const list=$('#pharmacy-list'); if(!items.length) { list.innerHTML='<div class="empty">No pharmacies were listed within 5 km. Try a nearby town or a different postcode.</div>'; return; } list.innerHTML=items.sort((a,b)=>distanceKm(lat,lon,a.lat,a.lon)-distanceKm(lat,lon,b.lat,b.lon)).slice(0,8).map(p=>{ const t=p.tags||{}, name=t.name||'Pharmacy', address=[t['addr:housenumber'],t['addr:street'],t['addr:city']].filter(Boolean).join(' ') || 'Address not listed'; const km=distanceKm(lat,lon,p.lat,p.lon).toFixed(1); return `<article class="pharmacy"><h3>${clean(name)}</h3><p>${clean(address)} · ${km} km away</p><a target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lon}#map=18/${p.lat}/${p.lon}">Open map →</a></article>`; }).join(''); }
+    async function getOverpassData(query) {
+      // The interpreter expects the query under its "data" form field. The original
+      // request sent raw text, which is why the public service rejected it.
+      const endpoints=['https://overpass-api.de/api/interpreter','https://overpass.private.coffee/api/interpreter'];
+      let lastError;
+      for (const endpoint of endpoints) {
+        try {
+          const controller=new AbortController();
+          const timer=setTimeout(()=>controller.abort(),18000);
+          const response=await fetch(endpoint,{method:'POST',body:'data='+encodeURIComponent(query),signal:controller.signal});
+          clearTimeout(timer);
+          if(!response.ok) throw new Error(`HTTP ${response.status}`);
+          const data=await response.json();
+          if(!Array.isArray(data.elements)) throw new Error('Invalid results');
+          return data;
+        } catch(error) { lastError=error; }
+      }
+      throw lastError || new Error('No Overpass server available');
+    }
+    async function findPharmacies(lat,lon,label) {
+      const status=$('#finder-status'), list=$('#pharmacy-list');
+      status.textContent=`Finding pharmacies near ${label}…`; list.innerHTML='';
+      try {
+        const query=`[out:json][timeout:20];(nwr["amenity"="pharmacy"](around:5000,${lat},${lon}););out center tags;`;
+        const data=await getOverpassData(query);
+        const items=data.elements.map(p=>({ ...p, lat:p.lat ?? p.center?.lat, lon:p.lon ?? p.center?.lon })).filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lon));
+        renderPharmacies(items,lat,lon);
+        status.textContent=`Showing up to 8 pharmacies within 5 km of ${label}.`;
+      } catch {
+        const map=`https://www.openstreetmap.org/#map=14/${lat}/${lon}`;
+        list.innerHTML=`<div class="empty"><strong>Live pharmacy listings are temporarily busy.</strong><br>Use the map link below to search this area directly.<br><br><a class="primary" target="_blank" rel="noopener" href="${map}">Open map near ${clean(label)} →</a></div>`;
+        status.textContent='The live listing could not load, but the map search is ready.';
+      }
+    }
+
+    $('#search-form').addEventListener('submit', e => { e.preventDefault(); activeCategory='All'; setRoute({view:'directory',q:$('#search').value.trim(),page:1}); });
+    document.addEventListener('click', e => { const cat=e.target.dataset.category, page=e.target.dataset.page, open=e.target.dataset.open, save=e.target.dataset.save; if(cat){activeCategory=cat; const s=getState(); setRoute({view:'directory',q:s.q,page:1});} if(page){const s=getState();setRoute({view:'directory',q:s.q,page});} if(open)setRoute({view:'detail',item:open}); if(save)saveItem(save); if(e.target.id==='back'){const s=getState();setRoute({view:'directory',q:s.q,page:1});} });
+    document.addEventListener('change', e => { if(e.target.matches('[data-step]')) localStorage.setItem('comfort-step-'+e.target.dataset.step,e.target.checked); });
+    $('#log-date').value = new Date().toISOString().slice(0,10); $('#log-form').addEventListener('submit',e=>{e.preventDefault(); const log=JSON.parse(localStorage.getItem('comfort-log')||'[]'); log.unshift({date:$('#log-date').value,symptom:$('#log-symptom').value.trim(),note:$('#log-note').value.trim()}); localStorage.setItem('comfort-log',JSON.stringify(log.slice(0,12))); e.target.reset(); $('#log-date').value=new Date().toISOString().slice(0,10); renderLog();});
+    $('#finder-form').addEventListener('submit',async e=>{e.preventDefault(); const place=$('#place').value.trim(), status=$('#finder-status'); if(!place) { status.textContent='Enter a town, postcode, or address first.'; return; } status.textContent='Finding that location…'; $('#pharmacy-list').innerHTML=''; try { const response=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q='+encodeURIComponent(place)); const results=await response.json(); if(!results.length) throw new Error('not found'); findPharmacies(Number(results[0].lat),Number(results[0].lon),results[0].display_name); } catch { status.textContent='That location could not be found. Try a town, postcode, or a more specific address.'; } });
+    $('#gps').addEventListener('click',()=>{ const status=$('#finder-status'); if(!navigator.geolocation) { status.textContent='This browser does not support location access. Enter a town or postcode instead.'; return; } status.textContent='Requesting your location…'; navigator.geolocation.getCurrentPosition(pos=>findPharmacies(pos.coords.latitude,pos.coords.longitude,'your current location'),()=>{status.textContent='Location access was unavailable. Enter a town or postcode instead.';},{enableHighAccuracy:false,timeout:10000,maximumAge:300000}); });
+    addEventListener('hashchange',route); renderLog(); route();
+  </script>
+</body>
+</html>
